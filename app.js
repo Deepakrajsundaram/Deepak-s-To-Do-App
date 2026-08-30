@@ -1,4 +1,4 @@
-const APP_VERSION="1.7";
+const APP_VERSION="1.8";
 (function ensureLatestVersion(){
   try{
     const params=new URLSearchParams(location.search);
@@ -100,7 +100,7 @@ function renderTasks(){
    if(filter==="active"&&t.done)return false;
    if(filter==="completed"&&!t.done)return false;
    return t.name.toLowerCase().includes(q);
- });
+ }));
  document.getElementById("tasksList").innerHTML=list.length?list.map(taskCard).join(""):`<div class="empty">No matching tasks</div>`;
 }
 function renderCalendar(){

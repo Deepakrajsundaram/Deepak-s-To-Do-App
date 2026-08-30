@@ -1,0 +1,16 @@
+{
+  "name": "Deepak's To-Do List",
+  "short_name": "Deepak's To-Do",
+  "start_url": "./?v=1.8",
+  "display": "standalone",
+  "background_color": "#0d1726",
+  "theme_color": "#0d1726",
+  "icons": [
+    {
+      "src": "icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
