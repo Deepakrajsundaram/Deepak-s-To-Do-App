@@ -1,110 +1,109 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
-<title>Minimal To-Do</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f7fa" id="themeColor">
+  <title>Minimal To-Do</title>
+  <link rel="stylesheet" href="style.css?v=1.3">
 </head>
 <body>
 <div class="phone">
-<main id="app">
-  <div class="top">
-    <button class="icon" id="menuButton" aria-label="Menu">☰</button>
-    <button class="icon" aria-label="More">•••</button>
-  </div>
-
-  <section id="todayView" class="view active-view">
-    <h1>Today</h1>
-    <div class="date" id="currentDate"></div>
-    <div class="progress">
-      <div class="bar"><div class="fill" id="progressFill"></div></div>
-      <div class="count" id="progressCount">0 / 0</div>
+  <main>
+    <div class="top">
+      <button class="icon-button" id="menuButton" aria-label="Open menu">☰</button>
+      <button class="icon-button" id="settingsButton" aria-label="Open settings">•••</button>
     </div>
-    <div class="section">TODAY</div>
-    <div id="today"></div>
-    <div class="section overdue">OVERDUE</div>
-    <div id="overdue"></div>
-  </section>
 
-  <section id="tasksView" class="view">
-    <h1>Tasks</h1>
-    <div class="tabs">
-      <button class="filter active" data-filter="all">All</button>
-      <button class="filter" data-filter="active">Active</button>
-      <button class="filter" data-filter="completed">Completed</button>
-    </div>
-    <div class="search-row">
-      <input id="searchInput" class="search" placeholder="Search tasks" autocomplete="off">
-    </div>
-    <div id="allTasks"></div>
-  </section>
-
-  <section id="calendarView" class="view">
-    <div class="calendar-head">
-      <button class="month-btn" id="prevMonth">‹</button>
-      <h1 id="monthTitle"></h1>
-      <button class="month-btn" id="nextMonth">›</button>
-    </div>
-    <div class="calendar-week">
-      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
-      <span>Thu</span><span>Fri</span><span>Sat</span>
-    </div>
-    <div class="calendar-grid" id="calendarGrid"></div>
-    <div class="section" id="selectedDateTitle"></div>
-    <div id="calendarTasks"></div>
-  </section>
-</main>
-
-<button class="fab" id="addButton" aria-label="Add task">+</button>
-
-<nav class="nav">
-  <button class="nav-btn active" data-view="todayView"><span>✓</span>Today</button>
-  <button class="nav-btn" data-view="tasksView"><span>☷</span>Tasks</button>
-  <button class="nav-btn" data-view="calendarView"><span>□</span>Calendar</button>
-</nav>
-
-<div class="sheet" id="sheet">
-  <div class="modal">
-    <div class="handle"></div>
-    <h2>Add Task</h2>
-    <input id="taskInput" class="input" placeholder="What needs to be done?" autocomplete="off">
-    <div class="row">
-      <button class="chip" id="dateChip">Today</button>
-      <button class="chip" id="timeChip">6:00 PM</button>
-      <button class="chip" id="priorityChip">Medium</button>
-    </div>
-    <button class="add" id="saveTask">Add Task</button>
-  </div>
-</div>
-
-<div class="settings-sheet" id="settingsSheet">
-  <div class="settings-modal">
-    <div class="handle"></div>
-    <h2>Settings</h2>
-    <div class="setting-row">
-      <div>
-        <div class="setting-title">Dark Mode</div>
-        <div class="setting-subtitle">Use a darker appearance</div>
+    <section class="view active" id="todayView">
+      <h1>Today</h1>
+      <div class="date" id="currentDate"></div>
+      <div class="progress">
+        <div class="bar"><div class="fill" id="progressFill"></div></div>
+        <div class="count" id="progressCount">0 / 0</div>
       </div>
-      <button class="toggle" id="darkToggle" aria-label="Toggle dark mode"><span></span></button>
+      <div class="section-title">TODAY</div>
+      <div id="todayList"></div>
+      <div class="section-title overdue-title">OVERDUE</div>
+      <div id="overdueList"></div>
+    </section>
+
+    <section class="view" id="tasksView">
+      <h1>Tasks</h1>
+      <div class="tabs">
+        <button class="filter active" data-filter="all">All</button>
+        <button class="filter" data-filter="active">Active</button>
+        <button class="filter" data-filter="completed">Completed</button>
+      </div>
+      <input id="searchInput" class="search" placeholder="Search tasks" autocomplete="off">
+      <div id="tasksList"></div>
+    </section>
+
+    <section class="view" id="calendarView">
+      <div class="calendar-head">
+        <button class="month-button" id="prevMonth">‹</button>
+        <h1 id="monthTitle"></h1>
+        <button class="month-button" id="nextMonth">›</button>
+      </div>
+      <div class="calendar-week">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+        <span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+      <div class="section-title" id="selectedDateTitle"></div>
+      <div id="calendarList"></div>
+    </section>
+  </main>
+
+  <button class="fab" id="addButton" aria-label="Add task">+</button>
+
+  <nav class="nav">
+    <button class="nav-button active" data-view="todayView"><span>✓</span>Today</button>
+    <button class="nav-button" data-view="tasksView"><span>☷</span>Tasks</button>
+    <button class="nav-button" data-view="calendarView"><span>□</span>Calendar</button>
+  </nav>
+
+  <div class="overlay" id="taskSheet">
+    <div class="bottom-sheet">
+      <div class="handle"></div>
+      <h2>Add Task</h2>
+      <input id="taskInput" class="input" placeholder="What needs to be done?" autocomplete="off">
+      <div class="row">
+        <button class="chip" id="taskDateChip">Today</button>
+        <button class="chip" id="taskTimeChip">Today</button>
+        <button class="chip" id="taskPriorityChip">Medium</button>
+      </div>
+      <button class="primary-button" id="saveTask">Add Task</button>
     </div>
-    <button class="settings-action" id="closeSettings">Done</button>
   </div>
-</div>
 
-<div class="menu-sheet" id="menuSheet">
-  <div class="menu-modal">
-    <div class="handle"></div>
-    <h2>Menu</h2>
-    <button class="menu-item" id="menuSettings">Settings</button>
-    <button class="menu-item" id="menuClearCompleted">Clear completed tasks</button>
-    <button class="settings-action" id="closeMenu">Close</button>
+  <div class="overlay" id="menuSheet">
+    <div class="bottom-sheet">
+      <div class="handle"></div>
+      <h2>Menu</h2>
+      <button class="sheet-button" id="menuSettings">Settings</button>
+      <button class="sheet-button" id="clearCompleted">Clear completed tasks</button>
+      <button class="secondary-button" id="closeMenu">Close</button>
+    </div>
   </div>
-</div>
 
-<div class="toast" id="toast"></div>
-<script src="app.js"></script>
+  <div class="overlay" id="settingsSheet">
+    <div class="bottom-sheet">
+      <div class="handle"></div>
+      <h2>Settings</h2>
+      <div class="setting-row">
+        <div>
+          <div class="setting-title">Dark Mode</div>
+          <div class="setting-subtitle">Use a darker appearance</div>
+        </div>
+        <button class="toggle" id="darkToggle" aria-label="Toggle dark mode"><span></span></button>
+      </div>
+      <button class="secondary-button" id="closeSettings">Done</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+<script src="app.js?v=1.3"></script>
 </body>
 </html>
