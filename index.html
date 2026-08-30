@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f7fa" id="themeColor">
   <title>Minimal To-Do</title>
-  <link rel="stylesheet" href="style.css?v=1.3">
+  <link rel="stylesheet" href="style.css?v=1.5">
 </head>
 <body>
 <div class="phone">
@@ -68,14 +68,25 @@
       <div class="handle"></div>
       <h2>Add Task</h2>
       <input id="taskInput" class="input" placeholder="What needs to be done?" autocomplete="off">
-      <div class="row">
-        <button class="chip" id="taskDateChip">Today</button>
-        <button class="chip" id="taskTimeChip">Today</button>
-        <button class="chip" id="taskPriorityChip">Medium</button>
-      </div>
+      <div class="field-group"><div class="field-label">DATE</div><div class="choice-row">
+        <button class="choice active" data-date-choice="today">Today</button>
+        <button class="choice" data-date-choice="tomorrow">Tomorrow</button>
+        <button class="choice" data-date-choice="pick">Pick date</button>
+      </div><input id="newTaskDate" class="field-input hidden-input" type="date"></div>
+      <div class="field-group"><div class="field-label">PRIORITY</div><div class="choice-row">
+        <button class="choice" data-priority="low">Low</button>
+        <button class="choice active" data-priority="medium">Medium</button>
+        <button class="choice" data-priority="high">High</button>
+      </div></div>
+      <div class="field-group"><div class="field-label">TIME</div><div class="choice-row">
+        <button class="choice active" data-time-choice="none">No time</button>
+        <button class="choice" data-time-choice="pick">Pick time</button>
+      </div><input id="newTaskTime" class="field-input hidden-input" type="time"></div>
       <button class="primary-button" id="saveTask">Add Task</button>
     </div>
   </div>
+
+<div class="overlay" id="editSheet"><div class="bottom-sheet"><div class="handle"></div><h2>Edit Task</h2><input id="editTaskInput" class="input" placeholder="Task name" autocomplete="off"><div class="edit-fields"><label>Date<input id="editTaskDate" class="field-input" type="date"></label><label>Time<input id="editTaskTime" class="field-input" type="time"></label><label>Priority<select id="editTaskPriority" class="field-input"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label></div><button class="primary-button" id="updateTask">Save Changes</button><button class="secondary-button" id="cancelEdit">Cancel</button></div></div>
 
   <div class="overlay" id="menuSheet">
     <div class="bottom-sheet">
@@ -104,6 +115,6 @@
 
   <div class="toast" id="toast"></div>
 </div>
-<script src="app.js?v=1.3"></script>
+<script src="app.js?v=1.5"></script>
 </body>
 </html>

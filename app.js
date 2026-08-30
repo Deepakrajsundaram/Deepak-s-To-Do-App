@@ -14,6 +14,8 @@ let filter="all";
 let selectedDate=todayKey;
 let calendarDate=new Date();
 let openSwipe=null;
+let editingTaskId=null;
+let newTaskDate=todayKey, newTaskPriority="medium", newTaskTime="";
 
 function key(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function safeId(){return crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`}
@@ -27,21 +29,48 @@ function loadTasks(){
 }
 function saveTasks(){localStorage.setItem(STORAGE_KEY,JSON.stringify(tasks))}
 function priorityLabel(p){return p.charAt(0).toUpperCase()+p.slice(1)}
+function dateLabel(k){
+ const d=new Date(k+"T12:00:00");
+ if(k===todayKey)return "Today";
+ const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+ if(k===key(tomorrow))return "Tomorrow";
+ return new Intl.DateTimeFormat("en-IN",{day:"numeric",month:"short"}).format(d);
+}
 function taskCard(t){
  const i=tasks.findIndex(x=>x.id===t.id);
  return `<div class="task-wrap">
    <button class="task-delete" data-delete="${t.id}"><span>⌫</span>Delete</button>
    <div class="task ${t.done?"done":""}" data-id="${t.id}" data-index="${i}">
      <button class="check">${t.done?"✓":""}</button>
-     <div class="info"><div class="name">${esc(t.name)}</div><div class="meta"><span class="dot ${t.priority}"></span>${priorityLabel(t.priority)}</div></div>
-     <div class="time">${esc(t.time||"")}</div>
+     <div class="info"><div class="name">${esc(t.name)}</div><div class="meta"><span class="dot ${t.priority}"></span>${priorityLabel(t.priority)}<span>·</span><span>${dateLabel(t.date)}</span></div></div>
+     ${t.time?`<div class="time">${esc(t.time)}</div>`:""}
    </div>
  </div>`;
+}
+function taskTimeMinutes(t){
+ if(!t.time)return Number.POSITIVE_INFINITY;
+ const m=t.time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+ if(!m)return Number.POSITIVE_INFINITY;
+ let h=Number(m[1]); const min=Number(m[2]);
+ if(m[3].toUpperCase()==="PM"&&h<12)h+=12;
+ if(m[3].toUpperCase()==="AM"&&h===12)h=0;
+ return h*60+min;
+}
+function priorityRank(p){return p==="high"?0:p==="medium"?1:2}
+function sortTasks(list){
+ return [...list].sort((a,b)=>{
+   if(a.done!==b.done)return a.done?1:-1;
+   const pr=priorityRank(a.priority)-priorityRank(b.priority);
+   if(pr!==0)return pr;
+   const tm=taskTimeMinutes(a)-taskTimeMinutes(b);
+   if(tm!==0)return tm;
+   return a.name.localeCompare(b.name);
+ });
 }
 function renderToday(){
  const d=new Intl.DateTimeFormat("en-IN",{weekday:"long",month:"short",day:"numeric"}).format(new Date());
  document.getElementById("currentDate").textContent=d;
- const todays=tasks.filter(t=>t.date===todayKey);
+ const todays=sortTasks(tasks.filter(t=>t.date===todayKey));
  document.getElementById("todayList").innerHTML=todays.length?todays.map(taskCard).join(""):`<div class="empty">No tasks for today</div>`;
  const done=todays.filter(t=>t.done).length;
  document.getElementById("progressCount").textContent=`${done} / ${todays.length}`;
@@ -51,7 +80,7 @@ function renderToday(){
 }
 function renderTasks(){
  const q=document.getElementById("searchInput").value.trim().toLowerCase();
- const list=tasks.filter(t=>{
+ const list=sortTasks(tasks.filter(t=>{
    if(filter==="active"&&t.done)return false;
    if(filter==="completed"&&!t.done)return false;
    return t.name.toLowerCase().includes(q);
@@ -72,7 +101,7 @@ function renderCalendar(){
  }
  document.getElementById("calendarGrid").innerHTML=html;
  document.querySelectorAll(".day").forEach(b=>b.onclick=()=>{selectedDate=b.dataset.date;renderCalendar();bindInteractions()});
- const selected=tasks.filter(t=>t.date===selectedDate);
+ const selected=sortTasks(tasks.filter(t=>t.date===selectedDate));
  const d=new Date(selectedDate+"T12:00:00");
  document.getElementById("selectedDateTitle").textContent=new Intl.DateTimeFormat("en-IN",{weekday:"long",month:"short",day:"numeric"}).format(d);
  document.getElementById("calendarList").innerHTML=selected.length?selected.map(taskCard).join(""):`<div class="empty">No tasks on this date</div>`;
@@ -81,7 +110,12 @@ function render(){renderToday();renderTasks();renderCalendar();bindInteractions(
 function bindInteractions(){
  document.querySelectorAll(".task[data-id]").forEach(el=>{
    el.onclick=e=>{
-     if(e.target.closest(".task-delete"))return;
+     if(e.target.closest(".check")) return;
+     if(e.target.closest(".task-delete")) return;
+     openEdit(el.dataset.id);
+   };
+   el.querySelector(".check").onclick=e=>{
+     e.stopPropagation();
      const t=tasks.find(x=>x.id===el.dataset.id);
      if(t){t.done=!t.done;saveTasks();render()}
    };
@@ -113,6 +147,10 @@ function bindSwipes(){
  });
 }
 function deleteTask(id){tasks=tasks.filter(t=>t.id!==id);saveTasks();render();toast("Task deleted")}
+function openEdit(id){const t=tasks.find(x=>x.id===id);if(!t)return;editingTaskId=id;editTaskInput.value=t.name;editTaskDate.value=t.date||todayKey;editTaskTime.value=timeToInput(t.time);editTaskPriority.value=t.priority||"medium";open("editSheet");setTimeout(()=>editTaskInput.focus(),100)}
+function timeToInput(v){if(!v||v==="Today")return "";const m=v.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);if(!m)return "";let h=+m[1];if(m[3].toUpperCase()==="PM"&&h<12)h+=12;if(m[3].toUpperCase()==="AM"&&h===12)h=0;return `${String(h).padStart(2,"0")}:${m[2]}`}
+function inputToTime(v){if(!v)return "";let [h,m]=v.split(":").map(Number);const ap=h>=12?"PM":"AM";h=h%12||12;return `${h}:${String(m).padStart(2,"0")} ${ap}`}
+function updateTask(){const t=tasks.find(x=>x.id===editingTaskId),name=editTaskInput.value.trim();if(!t||!name)return;t.name=name;t.date=editTaskDate.value||todayKey;t.time=inputToTime(editTaskTime.value);t.priority=editTaskPriority.value;saveTasks();close("editSheet");editingTaskId=null;render();toast("Task updated")}
 function switchView(id){
  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
  document.getElementById(id).classList.add("active");
@@ -123,8 +161,13 @@ function close(id){document.getElementById(id).classList.remove("open")}
 function addTask(){
  const input=document.getElementById("taskInput"),name=input.value.trim();
  if(!name)return;
- tasks.unshift({id:safeId(),name,priority:"medium",time:"Today",date:todayKey,done:false});
- saveTasks();input.value="";close("taskSheet");render();toast("Task added");
+ tasks.unshift({id:safeId(),name,priority:newTaskPriority,time:newTaskTime,date:newTaskDate,done:false});
+ saveTasks();input.value="";newTaskDate=todayKey;newTaskPriority="medium";newTaskTime="";
+document.querySelectorAll("[data-date-choice]").forEach(x=>x.classList.toggle("active",x.dataset.dateChoice==="today"));
+document.querySelectorAll("[data-priority]").forEach(x=>x.classList.toggle("active",x.dataset.priority==="medium"));
+document.querySelectorAll("[data-time-choice]").forEach(x=>x.classList.toggle("active",x.dataset.timeChoice==="none"));
+document.getElementById("newTaskDate").classList.add("hidden-input");document.getElementById("newTaskTime").classList.add("hidden-input");
+close("taskSheet");render();toast("Task added");
 }
 function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1400)}
 function setDark(dark){
@@ -139,7 +182,27 @@ document.querySelectorAll(".filter").forEach(b=>b.onclick=()=>{filter=b.dataset.
 document.getElementById("searchInput").oninput=renderTasks;
 document.getElementById("addButton").onclick=()=>open("taskSheet");
 document.getElementById("saveTask").onclick=addTask;
+document.getElementById("updateTask").onclick=updateTask;
+document.getElementById("cancelEdit").onclick=()=>{close("editSheet");editingTaskId=null};
 document.getElementById("taskInput").onkeydown=e=>{if(e.key==="Enter")addTask()};
+document.querySelectorAll("[data-date-choice]").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("[data-date-choice]").forEach(x=>x.classList.toggle("active",x===b));
+  if(b.dataset.dateChoice==="today"){newTaskDate=todayKey;newTaskDate.value="";}
+  else if(b.dataset.dateChoice==="tomorrow"){const d=new Date();d.setDate(d.getDate()+1);newTaskDate=key(d)}
+  else {document.getElementById("newTaskDate").classList.remove("hidden-input");document.getElementById("newTaskDate").focus();return}
+  document.getElementById("newTaskDate").classList.add("hidden-input");
+});
+document.getElementById("newTaskDate").onchange=e=>{if(e.target.value)newTaskDate=e.target.value};
+document.querySelectorAll("[data-priority]").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("[data-priority]").forEach(x=>x.classList.toggle("active",x===b));
+  newTaskPriority=b.dataset.priority;
+});
+document.querySelectorAll("[data-time-choice]").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("[data-time-choice]").forEach(x=>x.classList.toggle("active",x===b));
+  if(b.dataset.timeChoice==="pick"){document.getElementById("newTaskTime").classList.remove("hidden-input");document.getElementById("newTaskTime").focus()}
+  else {newTaskTime="";document.getElementById("newTaskTime").classList.add("hidden-input")}
+});
+document.getElementById("newTaskTime").onchange=e=>{newTaskTime=inputToTime(e.target.value)};
 document.getElementById("menuButton").onclick=()=>open("menuSheet");
 document.getElementById("settingsButton").onclick=()=>open("settingsSheet");
 document.getElementById("menuSettings").onclick=()=>{close("menuSheet");open("settingsSheet")};
@@ -151,7 +214,7 @@ document.getElementById("clearCompleted").onclick=()=>{
 document.getElementById("darkToggle").onclick=()=>setDark(!document.body.classList.contains("dark"));
 document.getElementById("prevMonth").onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()-1);renderCalendar();bindInteractions()};
 document.getElementById("nextMonth").onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()+1);renderCalendar();bindInteractions()};
-["taskSheet","menuSheet","settingsSheet"].forEach(id=>document.getElementById(id).onclick=e=>{if(e.target.id===id)close(id)});
+["taskSheet","editSheet","menuSheet","settingsSheet"].forEach(id=>document.getElementById(id).onclick=e=>{if(e.target.id===id)close(id)});
 
 setDark(localStorage.getItem(THEME_KEY)==="dark");
 render();
