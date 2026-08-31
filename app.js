@@ -1,4 +1,4 @@
-const APP_VERSION="1.8";
+const APP_VERSION="1.9";
 (function ensureLatestVersion(){
   try{
     const params=new URLSearchParams(location.search);
@@ -91,8 +91,13 @@ function renderToday(){
  const done=todays.filter(t=>t.done).length;
  document.getElementById("progressCount").textContent=`${done} / ${todays.length}`;
  document.getElementById("progressFill").style.width=todays.length?`${done/todays.length*100}%`:"0%";
- const overdueData=JSON.parse(localStorage.getItem("minimal-todo-overdue-v1")||"[]");
- document.getElementById("overdueList").innerHTML=overdueData.length?overdueData.map(t=>`<div class="task-wrap"><button class="task-delete" data-overdue="${t.id}"><span>⌫</span>Delete</button><div class="task"><div class="check"></div><div class="info"><div class="name">${esc(t.name)}</div><div class="meta"><span class="dot ${t.priority||"medium"}"></span>${priorityLabel(t.priority||"medium")}</div></div><div class="time overdue-time">${esc(t.time||"Overdue")}</div></div></div>`).join(""):`<div class="empty">Nothing overdue</div>`;
+ const legacyOverdue=JSON.parse(localStorage.getItem("minimal-todo-overdue-v1")||"[]");
+ const overdueTasks=tasks.filter(t=>!t.done && t.date && t.date<todayKey);
+ // Keep compatibility with the old overdue store, but prefer the main task store.
+ const taskIds=new Set(overdueTasks.map(t=>t.id));
+ const legacyOnly=legacyOverdue.filter(t=>!taskIds.has(t.id));
+ const overdueData=[...overdueTasks,...legacyOnly];
+ document.getElementById("overdueList").innerHTML=overdueData.length?overdueData.map(t=>`<div class="task-wrap"><button class="task-delete" data-overdue="${t.id}"><span>⌫</span>Delete</button><div class="task"><div class="check"></div><div class="info"><div class="name">${esc(t.name)}</div><div class="meta"><span class="dot ${t.priority||"medium"}"></span>${priorityLabel(t.priority||"medium")}<span>·</span><span>${dateLabel(t.date)||"Overdue"}</span></div></div><div class="time overdue-time">${esc(t.time||"Overdue")}</div></div></div>`).join(""):`<div class="empty">Nothing overdue</div>`;
 }
 function renderTasks(){
  const q=document.getElementById("searchInput").value.trim().toLowerCase();
@@ -139,8 +144,14 @@ function bindInteractions(){
  document.querySelectorAll("[data-delete]").forEach(b=>b.onclick=e=>{e.stopPropagation();deleteTask(b.dataset.delete)});
  document.querySelectorAll("[data-overdue]").forEach(b=>b.onclick=e=>{
    e.stopPropagation();
+   const id=b.dataset.overdue;
+   const task=tasks.find(x=>x.id===id);
+   if(task){
+     tasks=tasks.filter(x=>x.id!==id);
+     saveTasks();
+   }
    let list=JSON.parse(localStorage.getItem("minimal-todo-overdue-v1")||"[]");
-   list=list.filter(x=>x.id!==b.dataset.overdue);
+   list=list.filter(x=>x.id!==id);
    localStorage.setItem("minimal-todo-overdue-v1",JSON.stringify(list));
    render();toast("Task deleted");
  });
