@@ -1,7 +1,7 @@
 {
   "name": "Deepak's To-Do List",
   "short_name": "Deepak's To-Do",
-  "start_url": "./?v=1.9",
+  "start_url": "./?v=1.8",
   "display": "standalone",
   "background_color": "#0d1726",
   "theme_color": "#0d1726",

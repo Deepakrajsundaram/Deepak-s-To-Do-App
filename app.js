@@ -16,6 +16,7 @@ const APP_VERSION="1.9";
 })();
 const STORAGE_KEY="minimal-todo-tasks-v1";
 const THEME_KEY="minimal-todo-theme";
+const HABIT_KEY="minimal-todo-walk8k-v1";
 const todayKey=key(new Date());
 
 const defaultTasks=[
@@ -32,6 +33,7 @@ let calendarDate=new Date();
 let openSwipe=null;
 let editingTaskId=null;
 let newTaskDate=todayKey, newTaskPriority="medium", newTaskTime="";
+let editingSource="task";
 
 function key(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function safeId(){return crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`}
@@ -44,6 +46,7 @@ function loadTasks(){
  }catch{return defaultTasks}
 }
 function saveTasks(){localStorage.setItem(STORAGE_KEY,JSON.stringify(tasks))}
+function yesterdayKey(){const d=new Date();d.setDate(d.getDate()-1);return key(d)}
 function priorityLabel(p){return p.charAt(0).toUpperCase()+p.slice(1)}
 function dateLabel(k){
  const d=new Date(k+"T12:00:00");
@@ -91,13 +94,8 @@ function renderToday(){
  const done=todays.filter(t=>t.done).length;
  document.getElementById("progressCount").textContent=`${done} / ${todays.length}`;
  document.getElementById("progressFill").style.width=todays.length?`${done/todays.length*100}%`:"0%";
- const legacyOverdue=JSON.parse(localStorage.getItem("minimal-todo-overdue-v1")||"[]");
- const overdueTasks=tasks.filter(t=>!t.done && t.date && t.date<todayKey);
- // Keep compatibility with the old overdue store, but prefer the main task store.
- const taskIds=new Set(overdueTasks.map(t=>t.id));
- const legacyOnly=legacyOverdue.filter(t=>!taskIds.has(t.id));
- const overdueData=[...overdueTasks,...legacyOnly];
- document.getElementById("overdueList").innerHTML=overdueData.length?overdueData.map(t=>`<div class="task-wrap"><button class="task-delete" data-overdue="${t.id}"><span>⌫</span>Delete</button><div class="task"><div class="check"></div><div class="info"><div class="name">${esc(t.name)}</div><div class="meta"><span class="dot ${t.priority||"medium"}"></span>${priorityLabel(t.priority||"medium")}<span>·</span><span>${dateLabel(t.date)||"Overdue"}</span></div></div><div class="time overdue-time">${esc(t.time||"Overdue")}</div></div></div>`).join(""):`<div class="empty">Nothing overdue</div>`;
+ const overdueData=JSON.parse(localStorage.getItem("minimal-todo-overdue-v1")||"[]").map(t=>({...t,date:t.date||yesterdayKey(),priority:t.priority||"medium",done:false}));
+ document.getElementById("overdueList").innerHTML=overdueData.length?sortTasks(overdueData).map(t=>`<div class="task-wrap"><button class="task-delete" data-overdue-delete="${t.id}"><span>⌫</span>Delete</button><div class="task" data-overdue-id="${t.id}"><button class="check"></button><div class="info"><div class="name">${esc(t.name)}</div><div class="meta"><span class="dot ${t.priority}"></span>${priorityLabel(t.priority)}<span>·</span><span>${dateLabel(t.date)}</span></div></div>${t.time?`<div class="time overdue-time">${esc(t.time)}</div>`:""}</div></div>`).join(""):`<div class="empty">Nothing overdue</div>`;
 }
 function renderTasks(){
  const q=document.getElementById("searchInput").value.trim().toLowerCase();
@@ -127,7 +125,8 @@ function renderCalendar(){
  document.getElementById("selectedDateTitle").textContent=new Intl.DateTimeFormat("en-IN",{weekday:"long",month:"short",day:"numeric"}).format(d);
  document.getElementById("calendarList").innerHTML=selected.length?selected.map(taskCard).join(""):`<div class="empty">No tasks on this date</div>`;
 }
-function render(){renderToday();renderTasks();renderCalendar();bindInteractions()}
+function renderHabit(){const done=localStorage.getItem(HABIT_KEY)===todayKey;document.getElementById("habitWalkCheck").classList.toggle("done",done)}
+function render(){renderToday();renderTasks();renderCalendar();renderHabit();bindInteractions()}
 function bindInteractions(){
  document.querySelectorAll(".task[data-id]").forEach(el=>{
    el.onclick=e=>{
@@ -142,18 +141,10 @@ function bindInteractions(){
    };
  });
  document.querySelectorAll("[data-delete]").forEach(b=>b.onclick=e=>{e.stopPropagation();deleteTask(b.dataset.delete)});
- document.querySelectorAll("[data-overdue]").forEach(b=>b.onclick=e=>{
-   e.stopPropagation();
-   const id=b.dataset.overdue;
-   const task=tasks.find(x=>x.id===id);
-   if(task){
-     tasks=tasks.filter(x=>x.id!==id);
-     saveTasks();
-   }
-   let list=JSON.parse(localStorage.getItem("minimal-todo-overdue-v1")||"[]");
-   list=list.filter(x=>x.id!==id);
-   localStorage.setItem("minimal-todo-overdue-v1",JSON.stringify(list));
-   render();toast("Task deleted");
+ document.querySelectorAll("[data-overdue-delete]").forEach(b=>b.onclick=e=>{e.stopPropagation();let list=JSON.parse(localStorage.getItem("minimal-todo-overdue-v1")||"[]");list=list.filter(x=>x.id!==b.dataset.overdueDelete);localStorage.setItem("minimal-todo-overdue-v1",JSON.stringify(list));render();toast("Task deleted")});
+ document.querySelectorAll("[data-overdue-id]").forEach(el=>{
+   el.onclick=e=>{if(e.target.closest(".check"))return;openEdit(el.dataset.overdueId,"overdue")};
+   el.querySelector(".check").onclick=e=>{e.stopPropagation();let list=JSON.parse(localStorage.getItem("minimal-todo-overdue-v1")||"[]");const t=list.find(x=>x.id===el.dataset.overdueId);if(t){list=list.filter(x=>x.id!==el.dataset.overdueId);localStorage.setItem("minimal-todo-overdue-v1",JSON.stringify(list));tasks.push({...t,date:t.date||yesterdayKey(),done:true});saveTasks();render();toast("Task completed")}};
  });
  bindSwipes();
 }
@@ -174,10 +165,10 @@ function bindSwipes(){
  });
 }
 function deleteTask(id){tasks=tasks.filter(t=>t.id!==id);saveTasks();render();toast("Task deleted")}
-function openEdit(id){const t=tasks.find(x=>x.id===id);if(!t)return;editingTaskId=id;editTaskInput.value=t.name;editTaskDate.value=t.date||todayKey;editTaskTime.value=timeToInput(t.time);editTaskPriority.value=t.priority||"medium";open("editSheet");setTimeout(()=>editTaskInput.focus(),100)}
+function openEdit(id,source="task"){editingTaskId=id;editingSource=source;let t=source==="task"?tasks.find(x=>x.id===id):JSON.parse(localStorage.getItem("minimal-todo-overdue-v1")||"[]").find(x=>x.id===id);if(!t){editingTaskId=null;return}editTaskInput.value=t.name;editTaskDate.value=t.date||(source==="overdue"?yesterdayKey():todayKey);editTaskTime.value=timeToInput(t.time);editTaskPriority.value=t.priority||"medium";open("editSheet");setTimeout(()=>editTaskInput.focus(),100)}
 function timeToInput(v){if(!v||v==="Today")return "";const m=v.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);if(!m)return "";let h=+m[1];if(m[3].toUpperCase()==="PM"&&h<12)h+=12;if(m[3].toUpperCase()==="AM"&&h===12)h=0;return `${String(h).padStart(2,"0")}:${m[2]}`}
 function inputToTime(v){if(!v)return "";let [h,m]=v.split(":").map(Number);const ap=h>=12?"PM":"AM";h=h%12||12;return `${h}:${String(m).padStart(2,"0")} ${ap}`}
-function updateTask(){const t=tasks.find(x=>x.id===editingTaskId),name=editTaskInput.value.trim();if(!t||!name)return;t.name=name;t.date=editTaskDate.value||todayKey;t.time=inputToTime(editTaskTime.value);t.priority=editTaskPriority.value;saveTasks();close("editSheet");editingTaskId=null;render();toast("Task updated")}
+function updateTask(){const name=editTaskInput.value.trim();if(!name||!editingTaskId)return;const date=editTaskDate.value||todayKey,time=inputToTime(editTaskTime.value),priority=editTaskPriority.value;if(editingSource==="task"){const t=tasks.find(x=>x.id===editingTaskId);if(!t)return;t.name=name;t.date=date;t.time=time;t.priority=priority;saveTasks()}else{let list=JSON.parse(localStorage.getItem("minimal-todo-overdue-v1")||"[]");const i=list.findIndex(x=>x.id===editingTaskId);if(i<0)return;const updated={...list[i],name,date,time,priority};if(date<todayKey){list[i]=updated;localStorage.setItem("minimal-todo-overdue-v1",JSON.stringify(list))}else{list.splice(i,1);localStorage.setItem("minimal-todo-overdue-v1",JSON.stringify(list));tasks.push({...updated,done:false});saveTasks()}}close("editSheet");editingTaskId=null;editingSource="task";render();toast("Task updated")}
 function switchView(id){
  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
  document.getElementById(id).classList.add("active");
@@ -210,11 +201,11 @@ document.getElementById("searchInput").oninput=renderTasks;
 document.getElementById("addButton").onclick=()=>open("taskSheet");
 document.getElementById("saveTask").onclick=addTask;
 document.getElementById("updateTask").onclick=updateTask;
-document.getElementById("cancelEdit").onclick=()=>{close("editSheet");editingTaskId=null};
+document.getElementById("cancelEdit").onclick=()=>{close("editSheet");editingTaskId=null;editingSource="task"};
 document.getElementById("taskInput").onkeydown=e=>{if(e.key==="Enter")addTask()};
 document.querySelectorAll("[data-date-choice]").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("[data-date-choice]").forEach(x=>x.classList.toggle("active",x===b));
-  if(b.dataset.dateChoice==="today"){newTaskDate=todayKey;newTaskDate.value="";}
+  if(b.dataset.dateChoice==="today"){newTaskDate=todayKey;}
   else if(b.dataset.dateChoice==="tomorrow"){const d=new Date();d.setDate(d.getDate()+1);newTaskDate=key(d)}
   else {document.getElementById("newTaskDate").classList.remove("hidden-input");document.getElementById("newTaskDate").focus();return}
   document.getElementById("newTaskDate").classList.add("hidden-input");
@@ -230,6 +221,7 @@ document.querySelectorAll("[data-time-choice]").forEach(b=>b.onclick=()=>{
   else {newTaskTime="";document.getElementById("newTaskTime").classList.add("hidden-input")}
 });
 document.getElementById("newTaskTime").onchange=e=>{newTaskTime=inputToTime(e.target.value)};
+document.getElementById("habitWalkCheck").onclick=e=>{e.stopPropagation();const done=localStorage.getItem(HABIT_KEY)===todayKey;if(done)localStorage.removeItem(HABIT_KEY);else localStorage.setItem(HABIT_KEY,todayKey);renderHabit()};
 document.getElementById("menuButton").onclick=()=>open("menuSheet");
 document.getElementById("settingsButton").onclick=()=>open("settingsSheet");
 document.getElementById("menuSettings").onclick=()=>{close("menuSheet");open("settingsSheet")};
