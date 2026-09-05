@@ -1,10 +1,16 @@
-# Minimal To-Do — V1.9
+# Minimal To-Do — V1.10
 
-- Tiny Walk 8K habit at the top of Today
+## Overdue fix
+- Overdue tasks are derived directly from the main task store: any incomplete task whose date is before today appears in Overdue.
+- This fixes overdue tasks disappearing from the main screen.
+- Legacy overdue items from older versions are migrated into the main task store automatically.
+- Overdue tasks use the same edit, complete, delete and swipe behavior as normal tasks.
+
+## Features
+- Habits at top: Walk 8K checkbox
 - Today tasks second
-- Overdue section third
-- Tap any task, including overdue tasks, to edit
-- Tap only the check mark to complete
+- Overdue tasks third
+- Tap task to edit; check mark alone toggles completion
 - Swipe left to delete
 - Today / Tomorrow / Pick date
 - Low / Medium / High priority
@@ -12,6 +18,6 @@
 - Priority + time sorting
 - Dark mode
 - Today / Tasks / Calendar
-- Existing task storage preserved under `minimal-todo-tasks-v1`
-- Strong cache/version refresh
-- Deepak's To-Do List icon and manifest
+- Search and filters
+- LocalStorage persistence
+- Automatic version refresh
